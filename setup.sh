@@ -14,8 +14,14 @@ apt update && apt install -y net-tools dropbear git curl
 # Step 2: Set Root Password
 echo ""
 echo "[2/6] Setting root password..."
-echo "Masukkan password untuk root:"
-passwd root
+read -p "Apakah Anda ingin mengubah password root? (y/n): " change_password
+
+if [ "$change_password" == "y" ] || [ "$change_password" == "Y" ]; then
+    echo "Masukkan password baru untuk root:"
+    passwd root
+else
+    echo "Skip setting password. Menggunakan password yang sudah ada."
+fi
 
 # Step 3: Start Dropbear SSH Server
 echo ""
