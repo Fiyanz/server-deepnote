@@ -108,12 +108,10 @@ if [ "$tunnel_choice" == "2" ]; then
     echo "Starting Ngrok tunnel on port 22..."
     echo ""
     
-    # Run ngrok in background
-    ngrok tcp 22 > /tmp/ngrok.log 2>&1 &
-    NGROK_PID=$!
-    
     # Wait for ngrok to start and get URL
     echo "Menunggu tunnel ngrok siap..."
+    ngrok tcp 22 > /tmp/ngrok.log 2>&1 &
+    NGROK_PID=$!
     sleep 5
     
     # Get URL from ngrok API
@@ -137,25 +135,17 @@ if [ "$tunnel_choice" == "2" ]; then
         echo "ssh -p $NGROK_PORT root@$NGROK_HOST"
         echo ""
         echo "URL disimpan di: ~/tunnel_url.txt"
+        echo "Cek URL: cat ~/tunnel_url.txt"
         echo "=========================================="
         echo ""
     fi
     
-    # Start heartbeat with periodic URL reminder
-    echo "Heartbeat aktif. Tekan Ctrl+C untuk stop."
+    echo "Tunnel berjalan. Jangan tutup terminal ini."
+    echo "Tekan Ctrl+C untuk stop."
     echo ""
-    COUNTER=0
-    while true; do 
-        echo "[$(date '+%H:%M:%S')] Heartbeat #$COUNTER"
-        
-        # Show URL every 10 heartbeats (50 minutes)
-        if [ $((COUNTER % 10)) -eq 0 ] && [ ! -z "$NGROK_URL" ]; then
-            echo "[INFO] Reminder - SSH: ssh -p $NGROK_PORT root@$NGROK_HOST"
-        fi
-        
-        COUNTER=$((COUNTER + 1))
-        sleep 300
-    done
+    
+    # Keep script running (simple wait, not loop)
+    wait $NGROK_PID
 else
     # Pinggy Setup
     echo "Salin URL dan port yang muncul untuk koneksi SSH!"
@@ -196,24 +186,19 @@ else
             echo "ssh -p $PINGGY_PORT root@$PINGGY_HOST"
             echo ""
             echo "URL disimpan di: ~/tunnel_url.txt"
+            echo "Cek URL: cat ~/tunnel_url.txt"
             echo "=========================================="
             echo ""
         else
             echo "[WARNING] Cek log manual: tail -f /tmp/pinggy.log"
         fi
         
-        # Heartbeat
-        echo "Heartbeat aktif. Tekan Ctrl+C untuk stop."
+        echo "Tunnel berjalan. Jangan tutup terminal ini."
+        echo "Tekan Ctrl+C untuk stop."
         echo ""
-        COUNTER=0
-        while true; do 
-            echo "[$(date '+%H:%M:%S')] Heartbeat #$COUNTER"
-            if [ $((COUNTER % 10)) -eq 0 ] && [ ! -z "$PINGGY_URL" ]; then
-                echo "[INFO] Reminder - SSH: ssh -p $PINGGY_PORT root@$PINGGY_HOST"
-            fi
-            COUNTER=$((COUNTER + 1))
-            sleep 300
-        done
+        
+        # Keep script running
+        wait $PINGGY_PID
     else
         echo ""
         echo "Starting Pinggy tunnel..."
@@ -241,22 +226,18 @@ else
             echo ""
             echo "URL disimpan di: ~/tunnel_url.txt"
             echo "Durasi: 60 menit (akun gratis)"
+            echo "Cek URL: cat ~/tunnel_url.txt"
             echo "=========================================="
             echo ""
         else
             echo "[WARNING] Cek log manual: tail -f /tmp/pinggy.log"
         fi
         
-        echo "Heartbeat aktif. Tekan Ctrl+C untuk stop."
+        echo "Tunnel berjalan. Jangan tutup terminal ini."
+        echo "Tekan Ctrl+C untuk stop."
         echo ""
-        COUNTER=0
-        while true; do 
-            echo "[$(date '+%H:%M:%S')] Heartbeat #$COUNTER"
-            if [ $((COUNTER % 10)) -eq 0 ] && [ ! -z "$PINGGY_URL" ]; then
-                echo "[INFO] Reminder - SSH: ssh -p $PINGGY_PORT root@$PINGGY_HOST"
-            fi
-            COUNTER=$((COUNTER + 1))
-            sleep 300
-        done
+        
+        # Keep script running
+        wait $PINGGY_PID
     fi
 fi
