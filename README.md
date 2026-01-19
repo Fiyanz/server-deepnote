@@ -1,5 +1,8 @@
 # 🚀 Remote SSH Documentation: Deepnote
 
+[![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](https://unlicense.org/)
+[![GitHub](https://img.shields.io/badge/GitHub-Fiyanz%2Fremote--server--deepnote-181717?logo=github)](https://github.com/Fiyanz/remote-server-deepnote)
+
 Dokumentasi ini menjelaskan prosedur teknis untuk membangun koneksi SSH yang stabil dan rendah latensi dari mesin lokal linux ke lingkungan kontainer Deepnote menggunakan Dropbear dan Pinggy.
 
 ---
@@ -24,7 +27,7 @@ Clone repository dan jalankan script all-in-one:
 
 ```bash
 git clone https://github.com/Fiyanz/remote-server-deepnote.git
-cd remote-deepnote
+cd remote-server-deepnote
 chmod +x setup.sh
 ./setup.sh
 ```
@@ -248,6 +251,23 @@ chmod +x setup-complete.sh
 - Setup menggunakan Dropbear sebagai SSH server
 - Integrasi dengan Pinggy untuk tunnel
 - Troubleshooting guide dan automation scripts
+
+---
+
+## 📄 License
+
+This project is released into the **public domain** under [The Unlicense](LICENSE).
+
+**What this means:**
+- ✅ Use for any purpose (commercial or non-commercial)
+- ✅ Modify and distribute freely
+- ✅ No attribution required
+- ✅ No restrictions whatsoever
+- 🌐 Dedicated to the public domain
+
+You are free to copy, modify, publish, use, compile, sell, or distribute this software, either in source code form or as a compiled binary, for any purpose, commercial or non-commercial, and by any means.
+
+For more information, see <https://unlicense.org>
 
 ---
 
