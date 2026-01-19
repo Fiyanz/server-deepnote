@@ -55,17 +55,54 @@ echo "[6/6] Creating tunnel..."
 
 if [ "$tunnel_choice" == "2" ]; then
     # Ngrok Setup
-    echo "Installing Ngrok..."
-    curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
-      | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null \
-      && echo "deb https://ngrok-agent.s3.amazonaws.com bookworm main" \
-      | tee /etc/apt/sources.list.d/ngrok.list \
-      && apt update \
-      && apt install -y ngrok
+    echo "Checking existing Ngrok sessions..."
     
-    echo ""
-    read -p "Masukkan Ngrok authtoken (dari https://dashboard.ngrok.com/get-started/your-authtoken): " ngrok_token
-    ngrok config add-authtoken $ngrok_token
+    # Check if ngrok is already running
+    if pgrep -x "ngrok" > /dev/null; then
+        echo ""
+        echo "⚠️  Ngrok sudah berjalan!"
+        echo "Akun gratis Ngrok hanya mengizinkan 1 sesi simultan."
+        echo ""
+        echo "Pilihan:"
+        echo "1. Matikan sesi ngrok yang lama dan buat baru"
+        echo "2. Batal (gunakan dashboard untuk manage sesi: https://dashboard.ngrok.com/agents)"
+        echo ""
+        read -p "Pilih (1/2): " ngrok_action
+        
+        if [ "$ngrok_action" == "1" ]; then
+            echo "Mematikan sesi ngrok yang lama..."
+            pkill -9 ngrok
+            sleep 2
+            echo "✓ Sesi lama sudah dimatikan"
+        else
+            echo "Setup dibatalkan. Silakan matikan sesi ngrok lama secara manual."
+            exit 0
+        fi
+    fi
+    
+    # Check if ngrok is installed
+    if ! command -v ngrok &> /dev/null; then
+        echo "Installing Ngrok..."
+        curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
+          | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null \
+          && echo "deb https://ngrok-agent.s3.amazonaws.com bookworm main" \
+          | tee /etc/apt/sources.list.d/ngrok.list \
+          && apt update \
+          && apt install -y ngrok
+    else
+        echo "✓ Ngrok sudah terinstal"
+    fi
+    
+    # Check if authtoken already configured
+    if [ ! -f /root/.config/ngrok/ngrok.yml ]; then
+        echo ""
+        echo "Dapatkan authtoken dari: https://dashboard.ngrok.com/get-started/your-authtoken"
+        read -p "Paste authtoken Anda disini: " ngrok_token
+        ngrok config add-authtoken $ngrok_token
+        echo "✓ Authtoken berhasil disimpan"
+    else
+        echo "✓ Authtoken sudah dikonfigurasi sebelumnya"
+    fi
     
     echo ""
     echo "Starting Ngrok tunnel on port 22..."
