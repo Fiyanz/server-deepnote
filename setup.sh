@@ -35,9 +35,9 @@ sleep 2
 netstat -tuln | grep :22
 
 if [ $? -eq 0 ]; then
-    echo "✓ Dropbear is running on port 22!"
+    echo "[OK] Dropbear is running on port 22!"
 else
-    echo "✗ Error: Port 22 is not listening"
+    echo "[ERROR] Port 22 is not listening"
     exit 1
 fi
 
@@ -60,7 +60,7 @@ if [ "$tunnel_choice" == "2" ]; then
     # Check if ngrok is already running
     if pgrep -x "ngrok" > /dev/null; then
         echo ""
-        echo "⚠️  Ngrok sudah berjalan!"
+        echo "[WARNING] Ngrok sudah berjalan!"
         echo "Akun gratis Ngrok hanya mengizinkan 1 sesi simultan."
         echo ""
         echo "Pilihan:"
@@ -73,7 +73,7 @@ if [ "$tunnel_choice" == "2" ]; then
             echo "Mematikan sesi ngrok yang lama..."
             pkill -9 ngrok
             sleep 2
-            echo "✓ Sesi lama sudah dimatikan"
+            echo "[OK] Sesi lama sudah dimatikan"
         else
             echo "Setup dibatalkan. Silakan matikan sesi ngrok lama secara manual."
             exit 0
@@ -90,7 +90,7 @@ if [ "$tunnel_choice" == "2" ]; then
           && apt update \
           && apt install -y ngrok
     else
-        echo "✓ Ngrok sudah terinstal"
+        echo "[OK] Ngrok sudah terinstal"
     fi
     
     # Check if authtoken already configured
@@ -99,15 +99,63 @@ if [ "$tunnel_choice" == "2" ]; then
         echo "Dapatkan authtoken dari: https://dashboard.ngrok.com/get-started/your-authtoken"
         read -p "Paste authtoken Anda disini: " ngrok_token
         ngrok config add-authtoken $ngrok_token
-        echo "✓ Authtoken berhasil disimpan"
+        echo "[OK] Authtoken berhasil disimpan"
     else
-        echo "✓ Authtoken sudah dikonfigurasi sebelumnya"
+        echo "[OK] Authtoken sudah dikonfigurasi sebelumnya"
     fi
     
     echo ""
     echo "Starting Ngrok tunnel on port 22..."
-    echo "Salin URL yang muncul untuk koneksi SSH!"
-    ngrok tcp 22
+    echo ""
+    
+    # Run ngrok in background
+    ngrok tcp 22 > /tmp/ngrok.log 2>&1 &
+    NGROK_PID=$!
+    
+    # Wait for ngrok to start and get URL
+    echo "Menunggu tunnel ngrok siap..."
+    sleep 5
+    
+    # Get URL from ngrok API
+    NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | grep -o '"public_url":"tcp://[^"]*' | cut -d'"' -f4 | head -1)
+    
+    if [ -z "$NGROK_URL" ]; then
+        echo "[WARNING] Gagal mendapatkan URL. Coba manual: curl http://localhost:4040/api/tunnels"
+    else
+        # Parse host and port
+        NGROK_HOST=$(echo $NGROK_URL | sed 's|tcp://||' | cut -d':' -f1)
+        NGROK_PORT=$(echo $NGROK_URL | sed 's|tcp://||' | cut -d':' -f2)
+        
+        # Save to file
+        echo "ssh -p $NGROK_PORT root@$NGROK_HOST" > ~/tunnel_url.txt
+        
+        echo "=========================================="
+        echo "[OK] Ngrok Tunnel Aktif!"
+        echo "=========================================="
+        echo ""
+        echo "Koneksi SSH dari komputer lokal:"
+        echo "ssh -p $NGROK_PORT root@$NGROK_HOST"
+        echo ""
+        echo "URL disimpan di: ~/tunnel_url.txt"
+        echo "=========================================="
+        echo ""
+    fi
+    
+    # Start heartbeat with periodic URL reminder
+    echo "Heartbeat aktif. Tekan Ctrl+C untuk stop."
+    echo ""
+    COUNTER=0
+    while true; do 
+        echo "[$(date '+%H:%M:%S')] Heartbeat #$COUNTER"
+        
+        # Show URL every 10 heartbeats (50 minutes)
+        if [ $((COUNTER % 10)) -eq 0 ] && [ ! -z "$NGROK_URL" ]; then
+            echo "[INFO] Reminder - SSH: ssh -p $NGROK_PORT root@$NGROK_HOST"
+        fi
+        
+        COUNTER=$((COUNTER + 1))
+        sleep 300
+    done
 else
     # Pinggy Setup
     echo "Salin URL dan port yang muncul untuk koneksi SSH!"
@@ -120,8 +168,95 @@ else
     
     if [ "$pinggy_choice" == "2" ]; then
         read -p "Masukkan token Pinggy Anda: " token
-        ssh -p 443 -R0:localhost:22 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 ${token}+tcp@free.pinggy.io
+        echo ""
+        echo "Starting Pinggy tunnel..."
+        
+        # Run pinggy and capture output
+        ssh -p 443 -R0:localhost:22 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 ${token}+tcp@free.pinggy.io > /tmp/pinggy.log 2>&1 &
+        PINGGY_PID=$!
+        
+        # Wait and parse URL
+        echo "Menunggu tunnel pinggy siap..."
+        sleep 8
+        
+        # Try to extract URL from log
+        PINGGY_URL=$(grep -oP 'tcp://[a-zA-Z0-9\-\.]+:\d+' /tmp/pinggy.log | head -1)
+        
+        if [ ! -z "$PINGGY_URL" ]; then
+            PINGGY_HOST=$(echo $PINGGY_URL | sed 's|tcp://||' | cut -d':' -f1)
+            PINGGY_PORT=$(echo $PINGGY_URL | sed 's|tcp://||' | cut -d':' -f2)
+            
+            echo "ssh -p $PINGGY_PORT root@$PINGGY_HOST" > ~/tunnel_url.txt
+            
+            echo "=========================================="
+            echo "[OK] Pinggy Tunnel Aktif!"
+            echo "=========================================="
+            echo ""
+            echo "Koneksi SSH dari komputer lokal:"
+            echo "ssh -p $PINGGY_PORT root@$PINGGY_HOST"
+            echo ""
+            echo "URL disimpan di: ~/tunnel_url.txt"
+            echo "=========================================="
+            echo ""
+        else
+            echo "[WARNING] Cek log manual: tail -f /tmp/pinggy.log"
+        fi
+        
+        # Heartbeat
+        echo "Heartbeat aktif. Tekan Ctrl+C untuk stop."
+        echo ""
+        COUNTER=0
+        while true; do 
+            echo "[$(date '+%H:%M:%S')] Heartbeat #$COUNTER"
+            if [ $((COUNTER % 10)) -eq 0 ] && [ ! -z "$PINGGY_URL" ]; then
+                echo "[INFO] Reminder - SSH: ssh -p $PINGGY_PORT root@$PINGGY_HOST"
+            fi
+            COUNTER=$((COUNTER + 1))
+            sleep 300
+        done
     else
-        ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:22 tcp@ap.free.pinggy.io
+        echo ""
+        echo "Starting Pinggy tunnel..."
+        
+        ssh -p 443 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -R0:localhost:22 tcp@ap.free.pinggy.io > /tmp/pinggy.log 2>&1 &
+        PINGGY_PID=$!
+        
+        echo "Menunggu tunnel pinggy siap..."
+        sleep 8
+        
+        PINGGY_URL=$(grep -oP 'tcp://[a-zA-Z0-9\-\.]+:\d+' /tmp/pinggy.log | head -1)
+        
+        if [ ! -z "$PINGGY_URL" ]; then
+            PINGGY_HOST=$(echo $PINGGY_URL | sed 's|tcp://||' | cut -d':' -f1)
+            PINGGY_PORT=$(echo $PINGGY_URL | sed 's|tcp://||' | cut -d':' -f2)
+            
+            echo "ssh -p $PINGGY_PORT root@$PINGGY_HOST" > ~/tunnel_url.txt
+            
+            echo "=========================================="
+            echo "[OK] Pinggy Tunnel Aktif!"
+            echo "=========================================="
+            echo ""
+            echo "Koneksi SSH dari komputer lokal:"
+            echo "ssh -p $PINGGY_PORT root@$PINGGY_HOST"
+            echo ""
+            echo "URL disimpan di: ~/tunnel_url.txt"
+            echo "Durasi: 60 menit (akun gratis)"
+            echo "=========================================="
+            echo ""
+        else
+            echo "[WARNING] Cek log manual: tail -f /tmp/pinggy.log"
+        fi
+        
+        echo "Heartbeat aktif. Tekan Ctrl+C untuk stop."
+        echo ""
+        COUNTER=0
+        while true; do 
+            echo "[$(date '+%H:%M:%S')] Heartbeat #$COUNTER"
+            if [ $((COUNTER % 10)) -eq 0 ] && [ ! -z "$PINGGY_URL" ]; then
+                echo "[INFO] Reminder - SSH: ssh -p $PINGGY_PORT root@$PINGGY_HOST"
+            fi
+            COUNTER=$((COUNTER + 1))
+            sleep 300
+        done
     fi
 fi
