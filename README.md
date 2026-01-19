@@ -1,7 +1,7 @@
 # 🚀 Remote SSH Documentation: Deepnote
 
 [![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](https://unlicense.org/)
-[![GitHub](https://img.shields.io/badge/GitHub-Fiyanz%2Fremote--server--deepnote-181717?logo=github)](https://github.com/Fiyanz/remote-server-deepnote)
+[![GitHub](https://img.shields.io/badge/GitHub-Fiyanz%2Fserver--deepnote-181717?logo=github)](https://github.com/Fiyanz/server-deepnote)
 
 Dokumentasi ini menjelaskan prosedur teknis untuk membangun koneksi SSH yang stabil dan rendah latensi dari mesin lokal linux ke lingkungan kontainer Deepnote menggunakan Dropbear dan Pinggy.
 
@@ -26,8 +26,8 @@ Karena Deepnote menggunakan arsitektur kontainer tanpa `systemd`, kita menggunak
 Clone repository dan jalankan script all-in-one:
 
 ```bash
-git clone https://github.com/Fiyanz/remote-server-deepnote.git
-cd remote-server-deepnote
+git clone https://github.com/Fiyanz/server-deepnote.git
+cd server-deepnote
 chmod +x setup.sh
 ./setup.sh
 ```
